@@ -4,7 +4,7 @@ import fasttext
 TRAIN_DATA_PATH = "./data/train_processed.csv"
 VAL_DATA_PATH = "./data/val_processed.csv"
 TEST_DATA_PATH = "./data/test_processed.csv"
-MODEL_SAVE_PATH = "./model/toutiao_fasttext.bin"
+MODEL_SAVE_PATH = "./models/fastText_jieba.bin"
 
 model = fasttext.train_supervised(
     input=TRAIN_DATA_PATH,
@@ -20,4 +20,5 @@ print(res)
 
 # Save model
 model.save_model(MODEL_SAVE_PATH)
-# (10000, 0.9082, 0.9082)
+# 测试集样本数，精确率，召回率
+# (10000, 0.9091, 0.9091)

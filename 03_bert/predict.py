@@ -1,64 +1,62 @@
-import numpy as np
 import torch
+import pandas as pd
+import numpy as np
 
-from models import Config, Model
-
-
-id_to_name = {
-    0: 'finance',
-    1: 'realty',
-    2: 'stocks',
-    3: 'education',
-    4: 'science',
-    5: 'society',
-    6: 'politics',
-    7: 'sports',
-    8: 'game',
-    9: 'entertainment'
-}
+from tqdm import tqdm
+from dataset import load_dataset
+from bert import MyBertConfig, MyBertModel
+from transformers.utils import PaddingStrategy
 
 
-def inference(model, config, input_text, pad_size=32):
-    content = config.tokenizer.tokenize(input_text)
-    content = ['CLS'] + content
-    seq_len = len(content)
+config = MyBertConfig()
 
-    token_ids = config.tokenizer.convert_tokens_to_ids(content)
-    if pad_size:
-        if len(content) < pad_size:
-            mask = [1] * len(token_ids) + [0] * (pad_size - len(token_ids))
-            token_ids += ([0] * (pad_size - len(token_ids)))
-        else:
-            mask = [1] * pad_size
-            token_ids = token_ids[:pad_size]
-            seq_len = pad_size
+model = MyBertModel(config).to(config.device)
+checkpoint = torch.load(config.save_path, map_location=config.device)
+model.load_state_dict(checkpoint['model_state']) 
 
-        x = torch.LongTensor(token_ids).to(config.device)
-        seq_len = torch.LongTensor([seq_len]).to(config.device)
-        mask = torch.LongTensor(mask).to(config.device)
-        x = x.unsqueeze(0)
-        seq_len = seq_len.unsqueeze(0)
-        mask = mask.unsqueeze(0)
-        data = (x, seq_len, mask)
-        pred = model(data)
-        pred = torch.max(pred.data, dim=1).indices.cpu().numpy()
 
-        return pred
+def inference(test_dict: dict[str]):
+    model.eval()
 
-    return None
+    test_contents = test_dict['text']
+
+    # 获取 ids 和 mask
+    test_tokens = config.tokenizer.batch_encode_plus(
+        [test_contents], padding=PaddingStrategy.MAX_LENGTH, 
+        truncation=True, max_length=config.pad_size, return_tensors='pt'
+    )
+
+    ids = test_tokens["input_ids"].to(config.device)
+    masks = test_tokens["attention_mask"].to(config.device)
+
+    with torch.no_grad():
+        out = model(ids, masks)
+        pred_idx = torch.argmax(out, dim=1).item()
+        pred_label = config.class_list[pred_idx]
+
+    test_dict['pred_class'] = pred_label
+    
+    if 'label' in test_dict:
+        test_dict['label_class'] = config.class_list[test_dict['label']]
+        test_dict['is_correct'] = pred_label == config.class_list[test_dict['label']]
+
+    return test_dict
 
 
 if __name__ == '__main__':
-    config = Config()
+    # 加载测试数据
+    test_data = load_dataset(config.test_path)
+    
+    # 将测试数据改写为 dict
+    test_data = [{"text": x[0], "label": x[1]} for x in test_data]
 
-    np.random.seed(42)
-    torch.manual_seed(42)
-    torch.cuda.manual_seed_all(42)
-    torch.backends.cudnn.deterministic = True
+    pred_results = []
+    for test_dict in tqdm(test_data, desc="Predicting"):
+        pred_results.append(inference(test_dict))
 
-    model = Model(config).to(config.device)
-    model.load_state_dict(torch.load(config.save_path, map_location=config.device))
-
-    input_text = "体育比赛非常精彩，运动员表现优异"
-    pred = inference(model, config, input_text)
-    print(id_to_name[pred.item()])
+    # 保存 CSV
+    df = pd.DataFrame(pred_results, columns=['text', 'label_class', 'pred_class', 'is_correct'])
+    
+    # 关键：保存路径不能和模型权重同一个！
+    df.to_csv("./logs/test_predict_result.csv", index=False, encoding="utf-8")
+    print("预测完成，已保存至 test_predict_result.csv")

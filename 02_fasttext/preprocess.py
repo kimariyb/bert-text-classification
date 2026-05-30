@@ -31,7 +31,7 @@ def preprocess(path: str, class_path: str, output_path: str = None) -> pd.DataFr
 
     # split word and transform to fasttext style
     df['label_name'] = df['label'].apply(lambda x: '__label__' + id_to_label[int(x)])
-    df['words'] = df['sentence'].apply(lambda x: ' '.join(jieba.cut(str(x))))
+    df['words'] = df['sentence'].apply(lambda x: ' '.join(jieba.lcut(str(x))))
     df = df[['label_name', 'words']]
 
     if output_path:
