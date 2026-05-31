@@ -207,12 +207,8 @@ marimo/_lsp/
 __marimo__/
 
 01_baseline/models/
-01_baseline/data/
 02_fasttext/models/
-02_fasttext/data/
 03_bert/models/
-03_bert/data/
 03_bert/pre_train/
-04_distil/models/
-04_distil/data/
-04_distil/pre_train/
+04_compress/models/
+04_compress/pre_train/

@@ -1,0 +1,11 @@
+,预测: finance,预测: realty,预测: stocks,预测: education,预测: science,预测: society,预测: politics,预测: sports,预测: game,预测: entertainment
+真实: finance,921,23,32,4,6,2,6,2,2,2
+真实: realty,5,966,6,1,2,5,4,3,2,6
+真实: stocks,51,40,846,3,30,2,16,4,4,4
+真实: education,1,1,0,979,2,3,1,1,0,12
+真实: science,0,1,17,4,909,11,9,0,33,16
+真实: society,1,17,3,43,8,879,18,1,4,26
+真实: politics,5,9,24,17,15,11,909,2,0,8
+真实: sports,1,2,1,2,0,0,0,986,0,8
+真实: game,0,2,2,1,25,1,1,1,960,7
+真实: entertainment,0,2,0,4,2,1,0,17,5,969

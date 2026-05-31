@@ -15,10 +15,6 @@ from bert import MyBertConfig, MyBertModel
 from dataset import build_dataloader
 
 
-# ---------------------------------------------------------------------------
-# 日志配置
-# ---------------------------------------------------------------------------
-
 def setup_logger(log_dir: str = "logs", log_name: str = None) -> logging.Logger:
     """
     配置 logger，同时输出到控制台和日志文件。
@@ -65,10 +61,6 @@ def setup_logger(log_dir: str = "logs", log_name: str = None) -> logging.Logger:
     logger.info(f"日志文件保存至: {log_path}")
     return logger
 
-
-# ---------------------------------------------------------------------------
-# CSV 指标记录器
-# ---------------------------------------------------------------------------
 
 class MetricsCSVWriter:
     """
@@ -127,10 +119,6 @@ class MetricsCSVWriter:
         self._val_f.close()
 
 
-# ---------------------------------------------------------------------------
-# 工具函数
-# ---------------------------------------------------------------------------
-
 def compute_metrics(labels: np.ndarray, preds: np.ndarray) -> dict:
     """计算分类任务常用指标，返回 dict。"""
     return {
@@ -144,10 +132,6 @@ def compute_metrics(labels: np.ndarray, preds: np.ndarray) -> dict:
 def loss_fn(pred: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
     return F.cross_entropy(pred, label)
 
-
-# ---------------------------------------------------------------------------
-# Trainer
-# ---------------------------------------------------------------------------
 
 class Trainer:
     """
@@ -191,10 +175,6 @@ class Trainer:
 
         Path(config.save_path).parent.mkdir(parents=True, exist_ok=True)
 
-    # ------------------------------------------------------------------
-    # 公共接口
-    # ------------------------------------------------------------------
-
     def train(self, train_loader, val_loader, resume_path: str = None):
         """
         主训练入口。
@@ -235,10 +215,6 @@ class Trainer:
         finally:
             # 保证异常退出时 CSV 文件也正常关闭
             self.csv_writer.close()
-
-    # ------------------------------------------------------------------
-    # 私有方法
-    # ------------------------------------------------------------------
 
     def _train_one_epoch(self, train_loader, val_loader, epoch: int):
         self.model.train()
@@ -346,10 +322,6 @@ class Trainer:
         metrics  = compute_metrics(all_labels, all_preds)
         return metrics, avg_loss
 
-    # ------------------------------------------------------------------
-    # 日志
-    # ------------------------------------------------------------------
-
     def _log_train(self, epoch: int, step: int, total: int, loss: float, metrics: dict):
         self.logger.info(
             f"[Train] Epoch {epoch + 1}  Step {step:>4}/{total}  "
@@ -362,10 +334,6 @@ class Trainer:
             f"Loss {loss:.4f}  Acc {metrics['acc']:.2%}  F1 {metrics['f1']:.2%}  "
             f"Precision {metrics['precision']:.2%}  Recall {metrics['recall']:.2%}"
         )
-
-    # ------------------------------------------------------------------
-    # 模型保存 / 加载
-    # ------------------------------------------------------------------
 
     def _save_best(self, val_f1: float):
         """若 val_f1 刷新最优，则保存完整 checkpoint。"""
@@ -404,11 +372,6 @@ class Trainer:
             f"已恢复至 Epoch {self.state['epoch']}，"
             f"Step {self.state['step']}，Best F1 {self.state['best_f1']:.4f}"
         )
-
-
-# ---------------------------------------------------------------------------
-# 入口
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     config = MyBertConfig()

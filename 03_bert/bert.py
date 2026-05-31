@@ -3,6 +3,7 @@ import os
 import torch
 import torch.nn as nn
 from transformers import BertTokenizer, BertConfig, BertModel
+from datetime import datetime
 
 
 class MyBertConfig:
@@ -26,21 +27,22 @@ class MyBertConfig:
         self.save_path = "./models/"
         if not os.path.exists(self.save_path):
             os.mkdir(self.save_path)
-        self.save_path += self.model_name + "_original_.pt"
+        self.save_path += self.model_name + "_original_" + datetime.now().strftime("%Y%m%d%H%M%S") + ".pt"
+
 
         # 量化模型保存路径
         self.quantized_path = "./models/"
         if not os.path.exists(self.quantized_path):
             os.mkdir(self.quantized_path)
-        self.quantized_path += self.model_name + "_quantized_" + ".pt"
+        self.quantized_path += self.model_name + "_quantized_" + datetime.now().strftime("%Y%m%d%H%M%S") + ".pt"
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         # 类别数
         self.num_classes = len(self.class_list)
         # 训练轮数
-        self.num_epoches = 2
+        self.num_epoches = 3
         # 批次大小
-        self.batch_size = 256
+        self.batch_size = 512
         # 填充长度
         self.pad_size = 32
         # 学习率
