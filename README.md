@@ -1,18 +1,21 @@
 # BERT 文本分类项目
 
-今日头条新闻文本分类项目，基于多阶段模型实现从基准模型到 BERT 模型压缩的完整流程。
+基于机器学习与深度学习的中文新闻分类项目，实现了从传统机器学习到预训练语言模型的完整文本分类流程，并进一步探索模型压缩技术，包括动态量化、结构化剪枝以及知识蒸馏。
 
-## 项目结构
+## 项目简介
 
-```
-toutiao/
-├── 01_baseline/          # 基线模型（TF-IDF + 机器学习）
-├── 02_fasttext/          # FastText 模型
-├── 03_bert/               # BERT 模型
-├── 04_compress/           # BERT 模型压缩
-├── data/                  # 原始数据
-└── README.md
-```
+本项目使用今日头条新闻分类数据集（Toutiao News Dataset）完成中文新闻文本分类任务。
+
+实现了以下模型：
+
+- Random Forest（Baseline）
+- FastText
+- BERT
+- BERT Dynamic Quantization (INT8)
+- BERT Structured Pruning (30%)
+- BERT → BiLSTM Knowledge Distillation
+
+并对模型的分类性能与压缩效果进行了系统评估。
 
 ## 文本分类类别
 
@@ -29,102 +32,271 @@ toutiao/
 | game | 游戏 |
 | entertainment | 娱乐 |
 
-## 模型阶段
+## 技术路线
 
-### 01_baseline - 基线模型
+```
+                 新闻文本
+                      │
+          ┌───────────┼───────────┐
+          │           │           │
+          ▼           ▼           ▼
 
-基于 TF-IDF 特征提取，结合 RandomForest 和 XGBoost 构建基准分类模型。
+   TF-IDF+RF     FastText      BERT
 
-**技术栈**：sklearn、TfidfVectorizer、XGBoost
+                                  │
+                ┌─────────────────┼─────────────────┐
+                │                 │                 │
+                ▼                 ▼                 ▼
 
-**流程**：数据预处理 → TF-IDF向量化 → 模型训练 → 评估
+          INT8量化          30%剪枝         知识蒸馏(BiLSTM)
+```
 
-### 02_fasttext - FastText 模型
+## 模型介绍
 
-使用 jieba 分词进行中文分词，基于 FastText 实现文本分类。
+### 1. Random Forest（Baseline）
 
-**技术栈**：fasttext、jieba
+作为传统机器学习基线模型：
 
-**特点**：支持 n-gram 特征，自动调参
+```text
+文本
+ ↓
+TF-IDF
+ ↓
+Random Forest
+ ↓
+分类结果
+```
 
-### 03_bert - BERT 模型
+特点：
 
-基于预训练 BERT 的中文文本分类模型，支持分布式训练和 API 服务部署。
+* 训练速度快
+* 可解释性较好
+* 作为 Baseline 模型
 
-**技术栈**：PyTorch、transformers、Flask
 
-**模块**：
-- `train.py` - 模型训练
-- `predict.py` - 批量预测
-- `server.py` - Flask API 服务端
-- `client.py` - API 客户端
+### 2. FastText
 
-**启动服务**：
+采用 Facebook 提出的 FastText 文本分类模型。
+
+特点：
+
+* 训练效率高
+* 支持 n-gram 特征
+* 对中文短文本分类效果优秀
+
+```text
+Text
+ ↓
+Embedding
+ ↓
+Average Pooling
+ ↓
+Softmax
+```
+
+
+### 3. BERT
+
+采用预训练语言模型 BERT 进行微调。
+
+```text
+Text
+ ↓
+Tokenizer
+ ↓
+BERT Encoder
+ ↓
+CLS Token
+ ↓
+Linear Classifier
+ ↓
+Prediction
+```
+
+特点：
+
+* 利用上下文语义信息
+* 显著优于传统方法
+* 获得最佳分类性能
+
+
+## 模型压缩
+
+为了提升模型部署效率，对 BERT 进行了三种压缩方案。
+
+### 1. INT8 动态量化
+
+将权重从 FP32 压缩为 INT8：
+
+```text
+FP32 → INT8
+```
+
+优点：
+
+* 模型体积更小
+* 推理速度提升
+* 精度损失较小
+
+### 2. 30% 结构化剪枝
+
+对低重要性参数进行剪枝：
+
+```text
+Original Parameters
+        ↓
+   Remove 30%
+        ↓
+ Pruned Model
+```
+
+优点：
+
+* 减少参数量
+* 降低计算开销
+
+
+### 3. 知识蒸馏
+
+教师模型：
+
+```text
+BERT
+```
+
+学生模型：
+
+```text
+BiLSTM
+```
+
+蒸馏流程：
+
+```text
+Teacher(BERT)
+      ↓
+ Soft Labels
+      ↓
+ Student(BiLSTM)
+```
+
+目标：
+
+* 保留 BERT 的知识
+* 获得轻量级部署模型
+
+# 实验结果
+
+## 基础模型对比
+
+| Model         |   Accuracy |  Precision |     Recall |         F1 |
+| ------------- | ---------: | ---------: | ---------: | ---------: |
+| Random Forest |     0.7520 |     0.7822 |     0.7520 |     0.7595 |
+| FastText      |     0.9091 |     0.9091 |     0.9091 |     0.9091 |
+| BERT          | **0.9412** | **0.9415** | **0.9412** | **0.9413** |
+
+### 性能提升
+
+| 对比              | Accuracy 提升 |
+| --------------- | ----------: |
+| RF → FastText   |     +15.71% |
+| FastText → BERT |      +3.21% |
+| RF → BERT       |     +18.92% |
+
+可以看到：
+
+* FastText 显著优于传统机器学习方法；
+* BERT 进一步利用上下文语义信息获得最佳性能；
+* Random Forest 作为 Baseline 与深度学习模型存在明显差距。
+
+---
+
+## BERT 压缩实验
+
+| Model            |   Accuracy |   F1-Macro |  Precision |     Recall | F1 Retention |
+| ---------------- | ---------: | ---------: | ---------: | ---------: | -----------: |
+| Original BERT    | **0.9440** | **0.9441** | **0.9443** | **0.9440** |         100% |
+| INT8 Quantized   |     0.9249 |     0.9250 |     0.9266 |     0.9249 |        98.0% |
+| 30% Pruned       |     0.9324 |     0.9320 |     0.9327 |     0.9324 |        98.7% |
+| Distilled BiLSTM |     0.8367 |     0.8370 |     0.8381 |     0.8367 |        88.7% |
+
+---
+
+## 压缩效果分析
+
+### INT8量化
+
+```text
+Accuracy:
+94.40% → 92.49%
+```
+
+仅损失：
+
+```text
+1.91%
+```
+
+保留：
+
+```text
+98.0%
+```
+
+说明动态量化对分类性能影响较小，适合部署场景。
+
+---
+
+### 30%剪枝
+
+```text
+Accuracy:
+94.40% → 93.24%
+```
+
+仅下降：
+
+```text
+1.16%
+```
+
+保留：
+
+```text
+98.7%
+```
+
+说明 BERT 存在一定参数冗余。
+
+---
+
+### 知识蒸馏
+
+```text
+Accuracy:
+94.40% → 83.67%
+```
+
+保留：
+
+```text
+88.7%
+```
+
+虽然性能下降较明显，但学生模型推理速度和部署成本更低。
+
+
+## 环境配置
+
 ```bash
-python server.py
-```
+Python >= 3.10
 
-**API 调用**：
-```bash
-curl -X POST http://localhost:4567/bert/predict \
-  -H "Content-Type: application/json" \
-  -d '{"text": "今日头条是美国苹果公司推出的一款新闻资讯APP"}'
-```
-
-### 04_compress - BERT 模型压缩
-
-对 BERT 模型进行压缩优化，包含三种压缩策略：
-
-#### 知识蒸馏 (Distillation)
-将大型 BERT 模型的知识迁移到轻量级 BiLSTM 学生模型。
-
-#### 剪枝 (Pruning)
-移除 BERT 模型中的冗余参数，提升推理效率。
-
-#### 量化 (Quantization)
-将 FP32 模型参数量化为 INT8，减少内存占用。
-
-## 环境依赖
-
-```
 torch
 transformers
-sklearn
-xgboost
+scikit-learn
 fasttext
-jieba
-flask
-tqdm
-pandas
 numpy
+pandas
+tqdm
 ```
 
-## 训练配置
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| num_epoches | 3 | 训练轮数 |
-| batch_size | 512 | 批次大小 |
-| pad_size | 32 | 序列最大长度 |
-| learning_rate | 1e-5 | 学习率 |
-| device | cuda/cpu | 计算设备 |
-
-## 快速开始
-
-```bash
-# 1. 基线模型
-cd 01_baseline
-python baseline.py
-
-# 2. FastText 模型
-cd 02_fasttext
-python train.py
-
-# 3. BERT 模型训练
-cd 03_bert
-python train.py
-
-# 4. BERT 模型压缩
-cd 04_compress
-python train.py
-```
